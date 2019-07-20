@@ -5,10 +5,12 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.os.Environment
 import android.support.design.widget.FloatingActionButton
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
@@ -32,6 +34,10 @@ import com.jakewharton.rxbinding2.view.clicks
 import kotlinx.android.synthetic.main.activity_principal.*
 import kotlinx.android.synthetic.main.activity_timer.*
 import org.jetbrains.anko.toast
+import java.io.File
+import java.io.FileOutputStream
+import java.math.RoundingMode
+import java.text.DecimalFormat
 import java.util.concurrent.CompletableFuture
 
 private const val PERMISSION_REQUEST = 10
@@ -49,8 +55,10 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
     private var flagInitTimer = false
     private var flagFinishTimer = false
 
+    internal var test = ""
 
-    private var secondsRemaining = 120
+
+    private var secondsRemaining = 10
 
     val timer = Counter(secondsRemaining.toLong()*1000, 1000)
 
@@ -66,36 +74,52 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
     @SuppressLint("RestrictedApi")
     override fun onResume() {
         super.onResume()
-        btnScan.clicks()
-            .subscribe {
-                toast("Se inicia búsqueda")
-                initEmpaticaDeviceManager()
+        btnScan.setOnClickListener {
+            toast("Se inicia la búsqueda")
+            initEmpaticaDeviceManager()
+        }
+
+        btnStartCount.setOnClickListener {
+            if (flagConnected){
+                flagInitTimer = true
+                timer.start()
+
+                progress_countdown.max = secondsRemaining
+                mainInvisible()
+            }else{
+                toast("No está conectado a ningún dispositivo")
             }
+        }
 
-        btnStartCount.clicks()
-             .subscribe{
-                 if (flagConnected) {
-                     flagInitTimer = true
-                     timer.start()
-                     //val intent: Intent = Intent(this, timerActivity::class.java )
-                     //startActivity(intent)
-                     progress_countdown.max = secondsRemaining
-                     mainInvisible()
 
-                 }else
-                     toast("No está conectado a ningún dispositivo")
-             }
+        btnStop.setOnClickListener {
+            /*toast("Detenido")
+            timer.cancel()
+            timerInvisible()
+            progress_countdown.progress = 0
+            secondsRemaining = 120
+            flagFinishTimer = false
+            test = ""*/
 
-        btnStop.clicks()
-             .subscribe{
-                 toast("Detenido")
-                 timer.cancel()
-                 timerInvisible()
-                 progress_countdown.progress = 0
-                 secondsRemaining = 120
-                 flagInitTimer = false
-             }
-
+            val dialogStop = AlertDialog.Builder(this)
+            dialogStop.setMessage("¿Seguro desea detener la captura de datos?")
+                    .setCancelable(false)
+                    .setPositiveButton("Si",DialogInterface.OnClickListener{dialog, id ->
+                        toast("Detenido")
+                        timer.cancel()
+                        timerInvisible()
+                        progress_countdown.progress = 0
+                        secondsRemaining = 10
+                        //flagConnected = false
+                        flagFinishTimer = false
+                        test = ""
+                    })
+                    .setNegativeButton("No", DialogInterface.OnClickListener {
+                        dialog, id -> dialog.cancel()
+                    })
+            val alertStop = dialogStop.create()
+            alertStop.show()
+        }
 
     }
 
@@ -106,7 +130,15 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
             toast("Tiempo finalizado")
             println("Tiempo finalizado")
             progress_countdown.progress = 0
-            flagFinishTimer = true
+            val name = "ARCHIVO.csv"
+            val textFile = File(Environment.getExternalStorageDirectory(),name)
+            val fos = FileOutputStream(textFile)
+
+            fos.write(test.toByteArray())
+            fos.close()
+
+            test = ""
+            toast("Archivo guardado")
 
         }
 
@@ -128,8 +160,6 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
         if (secondsStr.length == 2) secondsStr
         else "0" + secondsStr}"
     }
-
-
 
 
 
@@ -200,6 +230,24 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
         if (deviceManager != null) {
             deviceManager!!.cleanUp()
         }
+    }
+
+
+    override fun onBackPressed() {
+        super.onBackPressed()
+
+        val dialogClos2 = AlertDialog.Builder(this)
+        dialogClos2.setMessage("¿Seguro desea salir de la aplicación?")
+                .setCancelable(false)
+                .setPositiveButton("Si",DialogInterface.OnClickListener{dialog, id ->
+                    finish()
+                })
+                .setNegativeButton("No", DialogInterface.OnClickListener { dialog, id ->
+                    dialog.cancel()
+                })
+        val alertClos2 = dialogClos2.create()
+        alertClos2.show()
+
     }
 
     override fun didDiscoverDevice(device: EmpaticaDevice?, deviceLabel: String?, rssi: Int, allowed: Boolean) {
@@ -293,15 +341,12 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
     override fun didReceiveBVP(bvp: Float, timestamp: Double) {
         println("INICIADO SENSOR BVP" + bvp.toString())
         // Log.i("sensorToma", bvp.toString())
-        /*if(flagCount) {
-            // iconList.add(bvp)
+        if(flagInitTimer){
             val df = DecimalFormat("#.##")
             df.roundingMode = RoundingMode.CEILING
             test += df.format(bvp).toString()
             test += "\n"
-        }*/
-        // sensorBvp.text = bvp.toString()
-        // Log.i("bvpS", bvp.toString())
+        }
 
     }
 
