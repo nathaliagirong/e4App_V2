@@ -30,4 +30,17 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
+    <style name="InitDialog" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="android:windowBackground">@color/white</item>
+        <item name="android:colorAccent">@color/colorPrimaryDark</item>
+        <item name="android:textColorPrimary">@color/negro</item>
+    </style>
+
+    <style name="StopDialog" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="android:windowBackground">@color/white</item>
+        <item name="android:colorAccent">@color/colorPrimaryDark</item>
+        <item name="android:textColorPrimary">@color/negro</item>
+    </style>
+
+
 </resources>

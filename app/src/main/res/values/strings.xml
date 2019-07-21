@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">Am I fibrillating?</string>
+    <string name="app_name">Atrial Fibrillation Screener</string>
     <string name="connected">CONNECTED</string>
 </resources>

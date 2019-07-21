@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Typeface
+import android.media.Image
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.Environment
@@ -19,6 +21,7 @@ import android.support.v7.app.AppCompatActivity
 import android.text.TextUtils
 import android.util.Log
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import com.empatica.empalink.ConnectionNotAllowedException
@@ -58,7 +61,7 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
     internal var test = ""
 
 
-    private var secondsRemaining = 10
+    private var secondsRemaining = 90
 
     val timer = Counter(secondsRemaining.toLong()*1000, 1000)
 
@@ -67,6 +70,10 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_principal)
         requestPermissions(permissions, PERMISSION_REQUEST)
+
+        textView4.typeface = Typeface.createFromAsset(assets,"fonts/Font2.otf")
+        textView7.typeface = Typeface.createFromAsset(assets, "fonts/Font2.otf")
+
 
 
     }
@@ -80,12 +87,28 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
         }
 
         btnStartCount.setOnClickListener {
-            if (flagConnected){
-                flagInitTimer = true
-                timer.start()
 
-                progress_countdown.max = secondsRemaining
-                mainInvisible()
+            if (flagConnected){
+
+                val dialogInit = AlertDialog.Builder(this, R.style.InitDialog)
+                dialogInit.setMessage("Para iniciar la captura de datos ubíquese en una posición cómoda para asegurarse de no hacer ningún movimiento durante el tiempo de recoleción")
+                        .setTitle("ATENCIÓN")
+                        .setPositiveButton("Iniciar", DialogInterface.OnClickListener{dialog, id ->
+                            secondsRemaining = 90
+                            flagInitTimer = true
+                            timer.start()
+                            println("Inicia temporizador")
+                            progress_countdown.max = secondsRemaining
+                            mainInvisible()
+
+                        })
+                        .setNegativeButton("Cancelar", DialogInterface.OnClickListener{dialog, id ->
+                            dialog.cancel()
+                        })
+                val alertInit = dialogInit.create()
+                alertInit.show()
+
+
             }else{
                 toast("No está conectado a ningún dispositivo")
             }
@@ -93,15 +116,8 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
 
 
         btnStop.setOnClickListener {
-            /*toast("Detenido")
-            timer.cancel()
-            timerInvisible()
-            progress_countdown.progress = 0
-            secondsRemaining = 120
-            flagFinishTimer = false
-            test = ""*/
 
-            val dialogStop = AlertDialog.Builder(this)
+            val dialogStop = AlertDialog.Builder(this, R.style.StopDialog)
             dialogStop.setMessage("¿Seguro desea detener la captura de datos?")
                     .setCancelable(false)
                     .setPositiveButton("Si",DialogInterface.OnClickListener{dialog, id ->
@@ -109,7 +125,7 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
                         timer.cancel()
                         timerInvisible()
                         progress_countdown.progress = 0
-                        secondsRemaining = 10
+                        secondsRemaining = 90
                         //flagConnected = false
                         flagFinishTimer = false
                         test = ""
@@ -139,6 +155,16 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
 
             test = ""
             toast("Archivo guardado")
+
+
+            timerInvisible()
+            deviceManager!!.stopScanning()
+            deviceManager!!.cleanUp()
+            flagConnected = false
+
+            btnScan!!.setEnabled(true)
+            updateLabel(txvStatus, "DESCONECTADO")
+
 
         }
 
@@ -259,7 +285,6 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
                 // Connect to the device
                 deviceManager!!.connectDevice(device)
                 if (deviceLabel != null) {
-                    toast(deviceLabel)
                     updateLabel(txvStatus, "CONECTÁNDOSE A: " + deviceLabel)
                 }
             } catch (e: ConnectionNotAllowedException) {
@@ -298,6 +323,7 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
 
         if(status!!.name == "DISCONNECTED"){
             updateLabel(txvStatus, "DESCONECTADO")
+            btnScan!!.setEnabled(true)
         }else if (status!!.name == "CONNECTED"){
             updateLabel(txvStatus, "CONECTADO")
             btnScan!!.setEnabled(false)
@@ -342,7 +368,7 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
         println("INICIADO SENSOR BVP" + bvp.toString())
         // Log.i("sensorToma", bvp.toString())
         if(flagInitTimer){
-            val df = DecimalFormat("#.##")
+            val df = DecimalFormat("#.####")
             df.roundingMode = RoundingMode.CEILING
             test += df.format(bvp).toString()
             test += "\n"
@@ -398,6 +424,9 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
         textViewTimer.setVisibility(TextView.VISIBLE)
         textView7.setVisibility(TextView.VISIBLE)
         btnStop.setVisibility(Button.VISIBLE)
+        //imageView.setVisibility(ImageView.INVISIBLE)
+        //imageView2.setVisibility(ImageView.INVISIBLE)
+        //imageView3.setVisibility(ImageView.INVISIBLE)
     }
 
 

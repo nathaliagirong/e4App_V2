@@ -31,9 +31,6 @@
         <activity android:name=".ui.wristband.wristbandActivity"
             android:theme="@style/AppTheme">
         </activity>
-        <activity android:name=".ui.timer.timerActivity"
-            android:theme="@style/AppTheme">
-        </activity>
     </application>
 
 </manifest>
