@@ -26,7 +26,8 @@ class SplashActivity : AppCompatActivity() {
             splashImgView.startAnimation(AnimationUtils.loadAnimation(this, R.anim.splash_out))
             Handler().postDelayed({
                 splashImgView.visibility = View.GONE
-                startActivity<wristbandActivity>()
+                //startActivity<wristbandActivity>()
+                startActivity<HomeActivity>()
                 finish()
             },500)
         }, timer.toLong())

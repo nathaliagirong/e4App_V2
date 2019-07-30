@@ -164,9 +164,15 @@
         app:layout_constraintVertical_bias="0.802"
         app:srcCompat="@drawable/ic_stop" />
 
-
-
-
+    <Button
+        android:id="@+id/btnPrueba"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:text="Button"
+        app:layout_constraintBottom_toTopOf="@+id/btnStartCount"
+        app:layout_constraintTop_toBottomOf="@+id/txvStatus"
+        tools:layout_editor_absoluteX="161dp" />
 
 
 </android.support.constraint.ConstraintLayout>

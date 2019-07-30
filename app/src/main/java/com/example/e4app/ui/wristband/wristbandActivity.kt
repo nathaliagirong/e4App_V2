@@ -32,16 +32,28 @@ import com.empatica.empalink.config.EmpaStatus
 import com.empatica.empalink.delegate.EmpaDataDelegate
 import com.empatica.empalink.delegate.EmpaStatusDelegate
 import com.example.e4app.R
+import com.example.e4app.models.Data
+import com.example.e4app.models.Datos
+import com.example.e4app.models.Respuesta
+import com.example.e4app.services.DatosService
+import com.example.e4app.services.ServiceBuilder
 import com.example.e4app.ui.sensor.SensorActivity
 import com.jakewharton.rxbinding2.view.clicks
+import com.jakewharton.threetenabp.AndroidThreeTen
+import kotlinx.android.synthetic.main.activity_home.*
 import kotlinx.android.synthetic.main.activity_principal.*
 import kotlinx.android.synthetic.main.activity_timer.*
 import org.jetbrains.anko.toast
+import org.threeten.bp.LocalDateTime
+import retrofit2.Call
 import java.io.File
 import java.io.FileOutputStream
 import java.math.RoundingMode
 import java.text.DecimalFormat
 import java.util.concurrent.CompletableFuture
+
+import retrofit2.Callback
+import retrofit2.Response
 
 private const val PERMISSION_REQUEST = 10
 
@@ -61,20 +73,28 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
     internal var test = ""
 
 
-    private var secondsRemaining = 90
+    private var secondsRemaining = 10
 
     val timer = Counter(secondsRemaining.toLong()*1000, 1000)
-
+    var name = ""
+    var comment = ""
+    var fecha = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        AndroidThreeTen.init(this)
+        name = intent.getStringExtra("Name")
+        comment = intent.getStringExtra("Comment")
+
+        println(name)
+        println(comment)
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_principal)
+
         requestPermissions(permissions, PERMISSION_REQUEST)
 
         textView4.typeface = Typeface.createFromAsset(assets,"fonts/Font2.otf")
         textView7.typeface = Typeface.createFromAsset(assets, "fonts/Font2.otf")
-
-
 
     }
 
@@ -86,15 +106,23 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
             initEmpaticaDeviceManager()
         }
 
+        btnPrueba.setOnClickListener {
+            postData()
+            println("name " + name)
+            println("comment " + comment)
+
+
+        }
+
         btnStartCount.setOnClickListener {
 
             if (flagConnected){
-
+                fecha = LocalDateTime.now().toString()
                 val dialogInit = AlertDialog.Builder(this, R.style.InitDialog)
                 dialogInit.setMessage("Para iniciar la captura de datos ubíquese en una posición cómoda para asegurarse de no hacer ningún movimiento durante el tiempo de recoleción")
                         .setTitle("ATENCIÓN")
                         .setPositiveButton("Iniciar", DialogInterface.OnClickListener{dialog, id ->
-                            secondsRemaining = 90
+                            secondsRemaining = 10
                             flagInitTimer = true
                             timer.start()
                             println("Inicia temporizador")
@@ -125,7 +153,7 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
                         timer.cancel()
                         timerInvisible()
                         progress_countdown.progress = 0
-                        secondsRemaining = 90
+                        secondsRemaining = 10
                         //flagConnected = false
                         flagFinishTimer = false
                         test = ""
@@ -137,6 +165,38 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
             alertStop.show()
         }
 
+    }
+
+    private fun postData(){
+        val newRespuesta = Respuesta()
+        val newData = Data()
+
+        newData.name = name
+        newData.comment = comment
+        newData.date = fecha.toString()
+
+        println(newData.name)
+        println(newData.comment)
+        println(newData.date)
+
+        val DatosService = ServiceBuilder.buildService(DatosService::class.java)
+        val requestCall = DatosService.uploadData(newData)
+
+        requestCall.enqueue(object : Callback<Datos> {
+
+            override fun onResponse(call: Call<Datos>, response: Response<Datos>) {
+                if(response.isSuccessful){
+                    println("SUCCESSFULL")
+                    println(response.body()!!.response)
+
+                }else{
+                    println("FAIL ON RESPONSE")
+                }
+            }
+            override fun onFailure(call: Call<Datos>, t: Throwable) {
+
+            }
+        })
     }
 
 
@@ -152,9 +212,13 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
 
             fos.write(test.toByteArray())
             fos.close()
-
             test = ""
             toast("Archivo guardado")
+
+            postData()
+            println("name: " + name)
+            println("comment: " + comment)
+            println("date: " + fecha)
 
 
             timerInvisible()
@@ -187,36 +251,6 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
         else "0" + secondsStr}"
     }
 
-
-
-    fun checkPermissions(context: Context, permissionsArray: Array<String>):Boolean{
-        var allSuccess = true
-        for (i in permissionsArray.indices){
-            if(checkCallingOrSelfPermission(permissionsArray[i]) == PackageManager.PERMISSION_DENIED)
-                allSuccess = false
-        }
-        return allSuccess
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_REQUEST){
-            var allSuccess = true
-            for (i in permissions.indices){
-                if (grantResults[i] == PackageManager.PERMISSION_DENIED){
-                    allSuccess = false
-                    var requestAgain = shouldShowRequestPermissionRationale(permissions[i])
-                    if (requestAgain){
-                        Toast.makeText(this, "Permisos denegados", Toast.LENGTH_SHORT).show()
-                    }else{
-                        Toast.makeText(this, "Ve a configuraciones y activa los permisos", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-            if (allSuccess)
-                Toast.makeText(this, "Permisos concedidos", Toast.LENGTH_SHORT).show()
-        }
-    }
 
     private fun initEmpaticaDeviceManager() {
         // Android 6 (API level 23) now require ACCESS_COARSE_LOCATION permission to use BLE
@@ -258,23 +292,6 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
         }
     }
 
-
-    override fun onBackPressed() {
-        super.onBackPressed()
-
-        val dialogClos2 = AlertDialog.Builder(this)
-        dialogClos2.setMessage("¿Seguro desea salir de la aplicación?")
-                .setCancelable(false)
-                .setPositiveButton("Si",DialogInterface.OnClickListener{dialog, id ->
-                    finish()
-                })
-                .setNegativeButton("No", DialogInterface.OnClickListener { dialog, id ->
-                    dialog.cancel()
-                })
-        val alertClos2 = dialogClos2.create()
-        alertClos2.show()
-
-    }
 
     override fun didDiscoverDevice(device: EmpaticaDevice?, deviceLabel: String?, rssi: Int, allowed: Boolean) {
         Log.i("allowed2", allowed.toString())
@@ -424,9 +441,6 @@ open class wristbandActivity : AppCompatActivity(), EmpaDataDelegate, EmpaStatus
         textViewTimer.setVisibility(TextView.VISIBLE)
         textView7.setVisibility(TextView.VISIBLE)
         btnStop.setVisibility(Button.VISIBLE)
-        //imageView.setVisibility(ImageView.INVISIBLE)
-        //imageView2.setVisibility(ImageView.INVISIBLE)
-        //imageView3.setVisibility(ImageView.INVISIBLE)
     }
 
 
